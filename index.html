@@ -167,7 +167,8 @@
         .then(response => response.json())
         .then(data => {
           const items = data.items;
-          videoList.innerHTML = '';  // Limpa a lista antes de mostrar novos resultados
+          videoList.innerHTML = '';  // Limpa a lista de vídeos de pesquisa antes de mostrar novos resultados
+          suggestedVideos.innerHTML = '';  // Limpa os vídeos sugeridos
 
           items.forEach(item => {
             const videoId = item.id.videoId;
