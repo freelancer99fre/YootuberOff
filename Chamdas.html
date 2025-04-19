@@ -29,7 +29,7 @@
       padding: 10px 20px;
       font-size: 16px;
       border-radius: 8px;
-      background-color: #d63031;
+      background-color: #00b894;
       color: white;
       border: none;
       cursor: pointer;
@@ -37,7 +37,7 @@
     }
 
     button:hover {
-      background-color: #c0392b;
+      background-color: #00a08b;
     }
 
     .status {
@@ -51,13 +51,13 @@
 
   <h1>Você está na chamada 👀</h1>
   <video id="video" autoplay muted playsinline></video>
-  <div class="status" id="status-text">🎙️ Microfone e câmera ativos</div>
-  <button onclick="desligarTudo()">Desligar Tudo</button>
+  <div class="status" id="status-text">🔴 Câmera e microfone desativados</div>
+  <button onclick="ativarCameras()">Ativar Câmera e Microfone</button>
 
   <script>
     let stream;
 
-    // Verificar dispositivos de câmera e microfone
+    // Função para listar dispositivos conectados
     async function listarDispositivos() {
       const devices = await navigator.mediaDevices.enumerateDevices();
       devices.forEach(device => {
@@ -69,33 +69,26 @@
       });
     }
 
-    // Função para iniciar a câmera e microfone
-    async function iniciarTudo() {
+    // Função para ativar a câmera e o microfone
+    async function ativarCameras() {
       try {
+        // Pedir permissão para usar a câmera e o microfone
         stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         document.getElementById('video').srcObject = stream;
-        document.getElementById('status-text').textContent = '🎙️ Microfone e câmera ativos';
+        document.getElementById('status-text').textContent = '🎙️ Câmera e microfone ativos';
       } catch (err) {
-        alert('Erro ao acessar câmera/microfone: ' + err.message);
+        // Exibe erro no console se algo der errado
         console.error(err);
+        alert('Erro ao acessar câmera/microfone: ' + err.message);
         document.getElementById('status-text').textContent = '❌ Erro ao acessar dispositivos';
       }
     }
 
-    // Função para desligar a câmera e o microfone
-    function desligarTudo() {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-        document.getElementById('video').srcObject = null;
-        document.getElementById('status-text').textContent = '🔇 Câmera e microfone desligados';
-      }
-    }
-
-    // Liga tudo automaticamente ao abrir a página
-    window.addEventListener('load', () => {
-      listarDispositivos();  // Lista os dispositivos conectados
-      iniciarTudo();         // Tenta acessar a câmera e o microfone
+    // Chama listarDispositivos ao carregar a página para ver os dispositivos
+    window.addEventListener('load', async () => {
+      await listarDispositivos();
     });
+
   </script>
 
 </body>
