@@ -1,0 +1,102 @@
+<form id="searchForm" style="text-align: center; margin-bottom: 20px;">
+    <input type="text" id="searchQuery" placeholder="Pesquisar no YouTube" required style="width: 300px; padding: 10px; font-size: 16px; border-radius: 5px; border: 1px solid #ccc;">
+    <button type="submit" style="padding: 10px 20px; font-size: 16px; background-color: #ff0000; color: white; border: none; border-radius: 5px; cursor: pointer;">Buscar</button>
+  </form>
+  
+  <div id="videoList" style="display: flex; flex-wrap: wrap; justify-content: center;"></div>
+  
+  <div id="videoPlayer" style="margin-top: 20px; text-align: center;"></div>
+  
+  <script>
+    const apiKey = 'AIzaSyAKxDbV2TRbx6xScReZgq5ke6xMejFIvI4';  // Sua chave de API
+    const searchForm = document.getElementById('searchForm');
+    const searchQuery = document.getElementById('searchQuery');
+    const videoList = document.getElementById('videoList');
+    const videoPlayer = document.getElementById('videoPlayer');
+  
+    // Função para buscar vídeos no YouTube
+    function searchVideos(query) {
+      const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${query}&type=video&key=${apiKey}`;
+  
+      fetch(url)
+        .then(response => response.json())
+        .then(data => {
+          const items = data.items;
+          videoList.innerHTML = '';  // Limpa a lista antes de mostrar novos resultados
+  
+          items.forEach(item => {
+            const videoId = item.id.videoId;
+            const title = item.snippet.title;
+            const thumbnail = item.snippet.thumbnails.medium.url;
+            const description = item.snippet.description;
+  
+            const videoItem = document.createElement('div');
+            videoItem.classList.add('video-item');
+            videoItem.style = `
+              width: 250px;
+              margin: 15px;
+              cursor: pointer;
+              border: 1px solid #ccc;
+              border-radius: 10px;
+              box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+              overflow: hidden;
+              transition: transform 0.2s;
+            `;
+  
+            videoItem.innerHTML = `
+              <img src="${thumbnail}" alt="${title}" style="width: 100%; height: 140px; object-fit: cover; border-bottom: 2px solid #ccc;">
+              <div style="padding: 10px;">
+                <p style="font-size: 16px; font-weight: bold; color: #333; margin: 0;">${title}</p>
+                <p style="font-size: 14px; color: #555; margin-top: 5px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${description.substring(0, 80)}...</p>
+              </div>
+            `;
+  
+            videoItem.addEventListener('click', () => {
+              showVideo(videoId);
+            });
+  
+            videoList.appendChild(videoItem);
+  
+            // Adiciona efeito de hover
+            videoItem.addEventListener('mouseover', () => {
+              videoItem.style.transform = 'scale(1.05)';
+            });
+  
+            videoItem.addEventListener('mouseout', () => {
+              videoItem.style.transform = 'scale(1)';
+            });
+          });
+        })
+        .catch(error => console.error('Erro ao buscar vídeos:', error));
+    }
+  
+    // Função para exibir o vídeo selecionado
+    function showVideo(videoId) {
+      // Verifica se o vídeo pode ser carregado
+      const iframe = document.createElement('iframe');
+      iframe.width = "560";
+      iframe.height = "315";
+      iframe.src = `https://www.youtube.com/embed/${videoId}`;
+      iframe.frameBorder = "0";
+      iframe.allowFullscreen = true;
+  
+      // Tenta inserir o vídeo no player
+      videoPlayer.innerHTML = ''; // Limpa o player anterior
+      videoPlayer.appendChild(iframe);
+  
+      iframe.onerror = function() {
+        // Caso o erro aconteça (vídeo não disponível), exibe uma mensagem
+        videoPlayer.innerHTML = `<p style="color: red;">Este vídeo não está disponível para exibição no seu site. Tente outro vídeo!</p>`;
+      };
+    }
+  
+    // Ação de busca ao enviar o formulário
+    searchForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      const query = searchQuery.value.trim();
+      if (query) {
+        searchVideos(query);
+      }
+    });
+  </script>
+  
