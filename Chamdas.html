@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Chamada de Vídeo</title>
+  <title>Chamada de Vídeo com WebRTC</title>
   <style>
     body {
       background-color: #121212;
@@ -49,96 +49,157 @@
 </head>
 <body>
 
-  <h1>Você está na chamada 👀</h1>
-  <video id="video" autoplay muted playsinline></video>
-  <div class="status" id="status-text">🔴 Conectando...</div>
+  <h1>Chamada de Vídeo com WebRTC</h1>
+  <video id="localVideo" autoplay muted></video>
+  <video id="remoteVideo" autoplay></video>
+  <div class="status" id="status-text">🔴 Esperando conexão...</div>
 
-  <button onclick="conectar()">Entrar na Chamada</button>
+  <button onclick="startCall()">Iniciar Chamada</button>
+  <button onclick="acceptCall()">Aceitar Chamada</button>
+  <button onclick="toggleCamera()">Ativar/Desativar Câmera</button>
+  <button onclick="toggleMicrophone()">Ativar/Desativar Microfone</button>
+  <button onclick="shareScreen()">Compartilhar Tela</button>
 
   <script>
-    const ws = new WebSocket('ws://localhost:8080'); // Conexão com o servidor WebSocket
     let localStream;
+    let remoteStream;
     let peerConnection;
-    const videoElement = document.getElementById('video');
+    let socket;
+    const serverConfig = {
+      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+    };
 
-    // Quando a conexão WebSocket for aberta
-    ws.onopen = () => {
+    const localVideo = document.getElementById('localVideo');
+    const remoteVideo = document.getElementById('remoteVideo');
+    const statusText = document.getElementById('status-text');
+    
+    let screenStream;
+    let isCameraEnabled = false; // Inicia com a câmera desativada
+    let isMicrophoneEnabled = true; // Inicia com o microfone ativado
+
+    // Conectar ao servidor WebSocket
+    socket = new WebSocket('ws://localhost:8080');
+    socket.onopen = () => {
       console.log('Conectado ao servidor WebSocket');
     };
 
-    // Quando a mensagem for recebida do servidor
-    ws.onmessage = (message) => {
-      const data = JSON.parse(message.data);
-      
-      if (data.offer) {
-        handleOffer(data.offer);
-      } else if (data.answer) {
-        handleAnswer(data.answer);
-      } else if (data.iceCandidate) {
-        handleNewICECandidate(data.iceCandidate);
+    socket.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+      if (message.offer) {
+        acceptCall(message.offer);
+      } else if (message.answer) {
+        peerConnection.setRemoteDescription(new RTCSessionDescription(message.answer));
+      } else if (message.iceCandidate) {
+        peerConnection.addIceCandidate(new RTCIceCandidate(message.iceCandidate));
       }
     };
 
-    // Função para obter a mídia local (câmera e microfone)
-    async function getLocalStream() {
+    // Função para capturar a mídia (câmera e microfone)
+    async function getMedia() {
       try {
-        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        videoElement.srcObject = localStream;
+        // Solicita apenas o áudio, sem vídeo
+        const constraints = { audio: true, video: false };
+        localStream = await navigator.mediaDevices.getUserMedia(constraints);
+        localVideo.srcObject = localStream;
       } catch (error) {
-        console.error('Erro ao acessar dispositivos', error);
+        console.error('Erro ao acessar mídia:', error);
+        alert('Erro ao acessar o microfone.');
       }
     }
 
-    // Função para conectar a chamada
-    async function conectar() {
-      await getLocalStream();
-      peerConnection = new RTCPeerConnection();
+    // Função para iniciar a chamada (Usuário A)
+    async function startCall() {
+      await getMedia(); // Apenas o áudio será ativado
+      peerConnection = new RTCPeerConnection(serverConfig);
 
-      // Enviar candidatos ICE para o servidor WebSocket
-      peerConnection.onicecandidate = event => {
-        if (event.candidate) {
-          ws.send(JSON.stringify({ iceCandidate: event.candidate }));
-        }
-      };
-
-      // Enviar o stream de vídeo e áudio para a conexão peer-to-peer
+      // Adiciona o stream de áudio à conexão
       localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
-      // Criar uma oferta e enviá-la para o servidor
+      // Cria a oferta e envia para o servidor WebSocket
       const offer = await peerConnection.createOffer();
       await peerConnection.setLocalDescription(offer);
-      ws.send(JSON.stringify({ offer }));
-    }
+      socket.send(JSON.stringify({ offer }));
 
-    // Receber a oferta de outro usuário e responder
-    async function handleOffer(offer) {
-      await getLocalStream();
-      peerConnection = new RTCPeerConnection();
+      statusText.textContent = '📞 Enviando oferta para o outro usuário...';
 
-      localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+      peerConnection.ontrack = (event) => {
+        remoteStream = event.streams[0];
+        remoteVideo.srcObject = remoteStream;
+        statusText.textContent = '📹 Conexão estabelecida!';
+      };
 
-      // Criar uma resposta (answer) para a oferta
-      await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-      const answer = await peerConnection.createAnswer();
-      await peerConnection.setLocalDescription(answer);
-      ws.send(JSON.stringify({ answer }));
-
-      // Enviar candidatos ICE
-      peerConnection.onicecandidate = event => {
+      peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
-          ws.send(JSON.stringify({ iceCandidate: event.candidate }));
+          socket.send(JSON.stringify({ iceCandidate: event.candidate }));
         }
       };
     }
 
-    // Receber a resposta de outro usuário
-    function handleAnswer(answer) {
-      peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+    // Função para aceitar a chamada (Usuário B)
+    async function acceptCall(offer) {
+      peerConnection = new RTCPeerConnection(serverConfig);
+
+      // Adiciona o stream de áudio à conexão
+      localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+      // Define a oferta recebida
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+
+      // Cria a resposta e envia para o servidor WebSocket
+      const answer = await peerConnection.createAnswer();
+      await peerConnection.setLocalDescription(answer);
+      socket.send(JSON.stringify({ answer }));
+
+      peerConnection.ontrack = (event) => {
+        remoteStream = event.streams[0];
+        remoteVideo.srcObject = remoteStream;
+        statusText.textContent = '📹 Conexão estabelecida!';
+      };
+
+      peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+          socket.send(JSON.stringify({ iceCandidate: event.candidate }));
+        }
+      };
     }
 
-    // Receber candidatos ICE de outro usuário
-    function handleNewICECandidate(iceCandidate) {
-      peerConnection.addIceCandidate(new RTCIceCandidate(iceCandidate));
+    // Função para ativar/desativar a câmera
+    function toggleCamera() {
+      if (localStream.getVideoTracks().length > 0) {
+        const videoTrack = localStream.getVideoTracks()[0];
+        isCameraEnabled = !isCameraEnabled;
+        videoTrack.enabled = isCameraEnabled;
+        statusText.textContent = isCameraEnabled ? '🎥 Câmera ativada' : '🎥 Câmera desativada';
+      } else {
+        alert("Você ainda não iniciou a câmera!");
+      }
+    }
+
+    // Função para ativar/desativar o microfone
+    function toggleMicrophone() {
+      const audioTrack = localStream.getAudioTracks()[0];
+      isMicrophoneEnabled = !isMicrophoneEnabled;
+      audioTrack.enabled = isMicrophoneEnabled;
+      statusText.textContent = isMicrophoneEnabled ? '🎤 Microfone ativado' : '🎤 Microfone desativado';
+    }
+
+    // Função para compartilhar a tela
+    async function shareScreen() {
+      try {
+        screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        const screenTrack = screenStream.getTracks()[0];
+        localStream.addTrack(screenTrack); // Adiciona o track da tela ao stream local
+
+        // Atualiza o vídeo local com a tela compartilhada
+        localVideo.srcObject = localStream;
+        statusText.textContent = '📱 Compartilhando tela...';
+
+        // Envia o track de tela para o peer
+        peerConnection.addTrack(screenTrack, localStream);
+      } catch (err) {
+        console.error('Erro ao compartilhar a tela:', err);
+        alert('Erro ao compartilhar a tela.');
+      }
     }
   </script>
 
