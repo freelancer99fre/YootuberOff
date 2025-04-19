@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Chamada de Vídeo 24h</title>
+  <title>Chamada de Vídeo</title>
   <style>
     body {
       background-color: #121212;
@@ -45,73 +45,101 @@
       font-size: 14px;
       color: #00cec9;
     }
-
-    .device-list {
-      margin-top: 20px;
-      text-align: left;
-    }
   </style>
 </head>
 <body>
 
   <h1>Você está na chamada 👀</h1>
   <video id="video" autoplay muted playsinline></video>
-  <div class="status" id="status-text">🔴 Câmera e microfone desativados</div>
-  <button onclick="ativarCameras()">Ativar Câmera e Microfone</button>
+  <div class="status" id="status-text">🔴 Conectando...</div>
 
-  <div class="device-list" id="device-list"></div>
+  <button onclick="conectar()">Entrar na Chamada</button>
 
   <script>
-    let stream;
+    const ws = new WebSocket('ws://localhost:8080'); // Conexão com o servidor WebSocket
+    let localStream;
+    let peerConnection;
+    const videoElement = document.getElementById('video');
 
-    // Função para listar dispositivos conectados
-    async function listarDispositivos() {
+    // Quando a conexão WebSocket for aberta
+    ws.onopen = () => {
+      console.log('Conectado ao servidor WebSocket');
+    };
+
+    // Quando a mensagem for recebida do servidor
+    ws.onmessage = (message) => {
+      const data = JSON.parse(message.data);
+      
+      if (data.offer) {
+        handleOffer(data.offer);
+      } else if (data.answer) {
+        handleAnswer(data.answer);
+      } else if (data.iceCandidate) {
+        handleNewICECandidate(data.iceCandidate);
+      }
+    };
+
+    // Função para obter a mídia local (câmera e microfone)
+    async function getLocalStream() {
       try {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const deviceList = document.getElementById('device-list');
-        deviceList.innerHTML = '<h3>Dispositivos Conectados:</h3>';
-        
-        devices.forEach(device => {
-          let deviceInfo = '';
-          if (device.kind === 'videoinput') {
-            deviceInfo = 'Câmera: ' + device.label;
-          } else if (device.kind === 'audioinput') {
-            deviceInfo = 'Microfone: ' + device.label;
-          }
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        videoElement.srcObject = localStream;
+      } catch (error) {
+        console.error('Erro ao acessar dispositivos', error);
+      }
+    }
 
-          const deviceItem = document.createElement('p');
-          deviceItem.textContent = deviceInfo;
-          deviceList.appendChild(deviceItem);
-        });
+    // Função para conectar a chamada
+    async function conectar() {
+      await getLocalStream();
+      peerConnection = new RTCPeerConnection();
 
-        if (devices.length === 0) {
-          deviceList.innerHTML = '<h3>Nenhum dispositivo encontrado!</h3>';
+      // Enviar candidatos ICE para o servidor WebSocket
+      peerConnection.onicecandidate = event => {
+        if (event.candidate) {
+          ws.send(JSON.stringify({ iceCandidate: event.candidate }));
         }
-      } catch (err) {
-        console.error('Erro ao listar dispositivos:', err);
-      }
+      };
+
+      // Enviar o stream de vídeo e áudio para a conexão peer-to-peer
+      localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+      // Criar uma oferta e enviá-la para o servidor
+      const offer = await peerConnection.createOffer();
+      await peerConnection.setLocalDescription(offer);
+      ws.send(JSON.stringify({ offer }));
     }
 
-    // Função para ativar a câmera e o microfone
-    async function ativarCameras() {
-      try {
-        // Solicita permissão para acessar a câmera e o microfone
-        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        document.getElementById('video').srcObject = stream;
-        document.getElementById('status-text').textContent = '🎙️ Câmera e microfone ativos';
-      } catch (err) {
-        // Exibe erro no console se algo der errado
-        console.error('Erro ao acessar câmera/microfone:', err);
-        alert('Erro ao acessar câmera/microfone: ' + err.message);
-        document.getElementById('status-text').textContent = '❌ Erro ao acessar dispositivos';
-      }
+    // Receber a oferta de outro usuário e responder
+    async function handleOffer(offer) {
+      await getLocalStream();
+      peerConnection = new RTCPeerConnection();
+
+      localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+      // Criar uma resposta (answer) para a oferta
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+      const answer = await peerConnection.createAnswer();
+      await peerConnection.setLocalDescription(answer);
+      ws.send(JSON.stringify({ answer }));
+
+      // Enviar candidatos ICE
+      peerConnection.onicecandidate = event => {
+        if (event.candidate) {
+          ws.send(JSON.stringify({ iceCandidate: event.candidate }));
+        }
+      };
     }
 
-    // Chama listarDispositivos ao carregar a página para ver os dispositivos
-    window.addEventListener('load', async () => {
-      await listarDispositivos();
-    });
+    // Receber a resposta de outro usuário
+    function handleAnswer(answer) {
+      peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+    }
 
+    // Receber candidatos ICE de outro usuário
+    function handleNewICECandidate(iceCandidate) {
+      peerConnection.addIceCandidate(new RTCIceCandidate(iceCandidate));
+    }
   </script>
 
 </body>
