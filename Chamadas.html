@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Chamada de Vídeo 24h</title>
+  <style>
+    body {
+      background-color: #121212;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    video {
+      width: 400px;
+      max-width: 90%;
+      border: 4px solid #00cec9;
+      border-radius: 12px;
+      background: black;
+    }
+
+    button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 16px;
+      border-radius: 8px;
+      background-color: #d63031;
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background-color: #c0392b;
+    }
+
+    .status {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #00cec9;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Você está na chamada 👀</h1>
+  <video id="video" autoplay muted playsinline></video>
+  <div class="status" id="status-text">🎙️ Microfone e câmera ativos</div>
+  <button onclick="desligarTudo()">Desligar Tudo</button>
+
+  <script>
+    let stream;
+
+    // Verificar dispositivos de câmera e microfone
+    async function listarDispositivos() {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      devices.forEach(device => {
+        if (device.kind === 'videoinput') {
+          console.log('Dispositivo de Câmera: ' + device.label);
+        } else if (device.kind === 'audioinput') {
+          console.log('Dispositivo de Microfone: ' + device.label);
+        }
+      });
+    }
+
+    // Função para iniciar a câmera e microfone
+    async function iniciarTudo() {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        document.getElementById('video').srcObject = stream;
+        document.getElementById('status-text').textContent = '🎙️ Microfone e câmera ativos';
+      } catch (err) {
+        alert('Erro ao acessar câmera/microfone: ' + err.message);
+        console.error(err);
+        document.getElementById('status-text').textContent = '❌ Erro ao acessar dispositivos';
+      }
+    }
+
+    // Função para desligar a câmera e o microfone
+    function desligarTudo() {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        document.getElementById('video').srcObject = null;
+        document.getElementById('status-text').textContent = '🔇 Câmera e microfone desligados';
+      }
+    }
+
+    // Liga tudo automaticamente ao abrir a página
+    window.addEventListener('load', () => {
+      listarDispositivos();  // Lista os dispositivos conectados
+      iniciarTudo();         // Tenta acessar a câmera e o microfone
+    });
+  </script>
+
+</body>
+</html>
