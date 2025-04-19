@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Chamada de Vídeo com WebRTC</title>
+  <title>Chamada de Vídeo Permanente</title>
   <style>
     body {
       background-color: #121212;
@@ -49,13 +49,11 @@
 </head>
 <body>
 
-  <h1>Chamada de Vídeo com WebRTC</h1>
+  <h1>Chamada de Vídeo Permanente</h1>
   <video id="localVideo" autoplay muted></video>
   <video id="remoteVideo" autoplay></video>
   <div class="status" id="status-text">🔴 Esperando conexão...</div>
 
-  <button onclick="startCall()">Iniciar Chamada</button>
-  <button onclick="acceptCall()">Aceitar Chamada</button>
   <button onclick="toggleCamera()">Ativar/Desativar Câmera</button>
   <button onclick="toggleMicrophone()">Ativar/Desativar Microfone</button>
   <button onclick="shareScreen()">Compartilhar Tela</button>
@@ -81,6 +79,7 @@
     socket = new WebSocket('ws://localhost:8080');
     socket.onopen = () => {
       console.log('Conectado ao servidor WebSocket');
+      startCall();  // Conectar automaticamente assim que a WebSocket for aberta
     };
 
     socket.onmessage = (event) => {
@@ -97,7 +96,7 @@
     // Função para capturar a mídia (câmera e microfone)
     async function getMedia() {
       try {
-        // Solicita apenas o áudio, sem vídeo
+        // Solicita áudio (sempre ativado) e vídeo (desativado)
         const constraints = { audio: true, video: false };
         localStream = await navigator.mediaDevices.getUserMedia(constraints);
         localVideo.srcObject = localStream;
@@ -107,7 +106,7 @@
       }
     }
 
-    // Função para iniciar a chamada (Usuário A)
+    // Função para entrar automaticamente na chamada
     async function startCall() {
       await getMedia(); // Apenas o áudio será ativado
       peerConnection = new RTCPeerConnection(serverConfig);
@@ -120,7 +119,7 @@
       await peerConnection.setLocalDescription(offer);
       socket.send(JSON.stringify({ offer }));
 
-      statusText.textContent = '📞 Enviando oferta para o outro usuário...';
+      statusText.textContent = '📞 Conectando...';
 
       peerConnection.ontrack = (event) => {
         remoteStream = event.streams[0];
@@ -135,7 +134,7 @@
       };
     }
 
-    // Função para aceitar a chamada (Usuário B)
+    // Função para aceitar a chamada (usuário entrando na sala)
     async function acceptCall(offer) {
       peerConnection = new RTCPeerConnection(serverConfig);
 
