@@ -72,14 +72,14 @@
     const statusText = document.getElementById('status-text');
     
     let screenStream;
-    let isCameraEnabled = false; // Inicia com a câmera desativada
-    let isMicrophoneEnabled = true; // Inicia com o microfone ativado
+    let isCameraEnabled = false;
+    let isMicrophoneEnabled = true;
 
     // Conectar ao servidor WebSocket
-    socket = new WebSocket('ws://localhost:8080');
+    socket = new WebSocket('ws://localhost:3000');
     socket.onopen = () => {
       console.log('Conectado ao servidor WebSocket');
-      startCall();  // Conectar automaticamente assim que a WebSocket for aberta
+      startCall();
     };
 
     socket.onmessage = (event) => {
@@ -93,10 +93,8 @@
       }
     };
 
-    // Função para capturar a mídia (câmera e microfone)
     async function getMedia() {
       try {
-        // Solicita áudio (sempre ativado) e vídeo (desativado)
         const constraints = { audio: true, video: false };
         localStream = await navigator.mediaDevices.getUserMedia(constraints);
         localVideo.srcObject = localStream;
@@ -106,15 +104,11 @@
       }
     }
 
-    // Função para entrar automaticamente na chamada
     async function startCall() {
-      await getMedia(); // Apenas o áudio será ativado
+      await getMedia();
       peerConnection = new RTCPeerConnection(serverConfig);
-
-      // Adiciona o stream de áudio à conexão
       localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
-      // Cria a oferta e envia para o servidor WebSocket
       const offer = await peerConnection.createOffer();
       await peerConnection.setLocalDescription(offer);
       socket.send(JSON.stringify({ offer }));
@@ -134,17 +128,12 @@
       };
     }
 
-    // Função para aceitar a chamada (usuário entrando na sala)
     async function acceptCall(offer) {
       peerConnection = new RTCPeerConnection(serverConfig);
-
-      // Adiciona o stream de áudio à conexão
       localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
-      // Define a oferta recebida
       await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
 
-      // Cria a resposta e envia para o servidor WebSocket
       const answer = await peerConnection.createAnswer();
       await peerConnection.setLocalDescription(answer);
       socket.send(JSON.stringify({ answer }));
@@ -162,19 +151,13 @@
       };
     }
 
-    // Função para ativar/desativar a câmera
     function toggleCamera() {
-      if (localStream.getVideoTracks().length > 0) {
-        const videoTrack = localStream.getVideoTracks()[0];
-        isCameraEnabled = !isCameraEnabled;
-        videoTrack.enabled = isCameraEnabled;
-        statusText.textContent = isCameraEnabled ? '🎥 Câmera ativada' : '🎥 Câmera desativada';
-      } else {
-        alert("Você ainda não iniciou a câmera!");
-      }
+      const videoTrack = localStream.getVideoTracks()[0];
+      isCameraEnabled = !isCameraEnabled;
+      videoTrack.enabled = isCameraEnabled;
+      statusText.textContent = isCameraEnabled ? '🎥 Câmera ativada' : '🎥 Câmera desativada';
     }
 
-    // Função para ativar/desativar o microfone
     function toggleMicrophone() {
       const audioTrack = localStream.getAudioTracks()[0];
       isMicrophoneEnabled = !isMicrophoneEnabled;
@@ -182,18 +165,13 @@
       statusText.textContent = isMicrophoneEnabled ? '🎤 Microfone ativado' : '🎤 Microfone desativado';
     }
 
-    // Função para compartilhar a tela
     async function shareScreen() {
       try {
         screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
         const screenTrack = screenStream.getTracks()[0];
-        localStream.addTrack(screenTrack); // Adiciona o track da tela ao stream local
-
-        // Atualiza o vídeo local com a tela compartilhada
+        localStream.addTrack(screenTrack);
         localVideo.srcObject = localStream;
         statusText.textContent = '📱 Compartilhando tela...';
-
-        // Envia o track de tela para o peer
         peerConnection.addTrack(screenTrack, localStream);
       } catch (err) {
         console.error('Erro ao compartilhar a tela:', err);
