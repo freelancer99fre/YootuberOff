@@ -45,6 +45,11 @@
       font-size: 14px;
       color: #00cec9;
     }
+
+    .device-list {
+      margin-top: 20px;
+      text-align: left;
+    }
   </style>
 </head>
 <body>
@@ -54,31 +59,49 @@
   <div class="status" id="status-text">🔴 Câmera e microfone desativados</div>
   <button onclick="ativarCameras()">Ativar Câmera e Microfone</button>
 
+  <div class="device-list" id="device-list"></div>
+
   <script>
     let stream;
 
     // Função para listar dispositivos conectados
     async function listarDispositivos() {
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      devices.forEach(device => {
-        if (device.kind === 'videoinput') {
-          console.log('Dispositivo de Câmera: ' + device.label);
-        } else if (device.kind === 'audioinput') {
-          console.log('Dispositivo de Microfone: ' + device.label);
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const deviceList = document.getElementById('device-list');
+        deviceList.innerHTML = '<h3>Dispositivos Conectados:</h3>';
+        
+        devices.forEach(device => {
+          let deviceInfo = '';
+          if (device.kind === 'videoinput') {
+            deviceInfo = 'Câmera: ' + device.label;
+          } else if (device.kind === 'audioinput') {
+            deviceInfo = 'Microfone: ' + device.label;
+          }
+
+          const deviceItem = document.createElement('p');
+          deviceItem.textContent = deviceInfo;
+          deviceList.appendChild(deviceItem);
+        });
+
+        if (devices.length === 0) {
+          deviceList.innerHTML = '<h3>Nenhum dispositivo encontrado!</h3>';
         }
-      });
+      } catch (err) {
+        console.error('Erro ao listar dispositivos:', err);
+      }
     }
 
     // Função para ativar a câmera e o microfone
     async function ativarCameras() {
       try {
-        // Pedir permissão para usar a câmera e o microfone
+        // Solicita permissão para acessar a câmera e o microfone
         stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         document.getElementById('video').srcObject = stream;
         document.getElementById('status-text').textContent = '🎙️ Câmera e microfone ativos';
       } catch (err) {
         // Exibe erro no console se algo der errado
-        console.error(err);
+        console.error('Erro ao acessar câmera/microfone:', err);
         alert('Erro ao acessar câmera/microfone: ' + err.message);
         document.getElementById('status-text').textContent = '❌ Erro ao acessar dispositivos';
       }
