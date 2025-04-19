@@ -103,6 +103,39 @@
       font-size: 14px;
       color: #333;
     }
+    @media screen and (max-width: 600px) {
+  body {
+    padding: 10px;
+  }
+
+  .container {
+    padding: 15px;
+    max-width: 100%;
+  }
+
+  .search-bar input[type="text"] {
+    padding: 10px;
+    font-size: 14px;
+  }
+
+  .search-bar button {
+    padding: 10px 20px;
+    font-size: 14px;
+  }
+
+  #videoList {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); /* Ajusta a largura das colunas */
+  }
+
+  #videoList img {
+    width: 100%; /* Aumenta a responsividade das imagens */
+  }
+
+  #playerContainer iframe {
+    height: 200px; /* Ajusta a altura do player no celular */
+  }
+}
+
   </style>
 </head>
 <body>
