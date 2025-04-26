@@ -1,39 +1,44 @@
 const express = require('express');
+const http = require('http');
 const WebSocket = require('ws');
 const path = require('path');
 
 const app = express();
-const server = require('http').createServer(app);
+const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-// Diretório para servir os arquivos HTML/JS
-app.use(express.static(path.join(__dirname, 'public')));
+const clients = new Map();
 
-// Configuração do WebSocket para comunicação em tempo real
 wss.on('connection', (ws) => {
-  console.log('Novo cliente conectado');
-  
-  // Enviar uma mensagem quando um novo cliente entrar
-  ws.send(JSON.stringify({ message: 'Conectado à chamada' }));
+  const id = Date.now().toString();
+  clients.set(id, ws);
+  console.log(`🔌 Novo usuário conectado: ${id}`);
 
-  // Receber mensagens de outros clientes
+  ws.send(JSON.stringify({ type: 'init', id }));
+
   ws.on('message', (message) => {
-    console.log('Mensagem recebida: ' + message);
-    // Repassar a mensagem para todos os outros clientes
-    wss.clients.forEach((client) => {
-      if (client !== ws && client.readyState === WebSocket.OPEN) {
-        client.send(message);
-      }
-    });
+    let data;
+    try {
+      data = JSON.parse(message);
+    } catch (err) {
+      return;
+    }
+
+    // Encaminha a mensagem para o destinatário
+    const target = clients.get(data.target);
+    if (target) {
+      target.send(JSON.stringify({ ...data, from: id }));
+    }
   });
 
-  // Quando o cliente se desconectar
   ws.on('close', () => {
-    console.log('Cliente desconectado');
+    clients.delete(id);
+    console.log(`❌ Usuário desconectado: ${id}`);
   });
 });
 
-// Iniciar o servidor na porta 3000
+app.use(express.static(path.join(__dirname, 'public')));
+
 server.listen(3000, () => {
-  console.log('Servidor rodando em http://localhost:3000');
+  console.log('🚀 Servidor rodando em http://localhost:3000');
 });
