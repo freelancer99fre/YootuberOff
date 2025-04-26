@@ -200,7 +200,7 @@
         <button id="nextPage" onclick="changePage(1)">Próximo &gt;</button>
       </div>
       <!-- Theme Toggle Button here -->
-      <button id="themeToggle" onclick="toggleTheme()">Mudar para Tema Escuro</button>
+      <button id="themeToggle" onclick="toggleTheme()"> Tema Escuro</button>
     </div>
 
     <div id="videoList"></div>
@@ -229,9 +229,9 @@
       document.querySelectorAll('#videoList p').forEach(p => p.classList.toggle('dark-theme'));
       
       if (body.classList.contains('dark-theme')) {
-        themeToggleButton.textContent = 'Mudar para Tema Claro';
+        themeToggleButton.textContent = ' Tema Claro';
       } else {
-        themeToggleButton.textContent = 'Mudar para Tema Escuro';
+        themeToggleButton.textContent = ' Tema Escuro';
       }
     }
 
