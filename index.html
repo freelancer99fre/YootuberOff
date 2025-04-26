@@ -4,19 +4,20 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Pesquisa de Vídeos</title>
-  <style>
+  <style id="theme-style">
+    /* Light Theme Styles (default) */
     body {
       font-family: 'Segoe UI', sans-serif;
-      background: #f4f6f8;
+      background: #f0f4f8;
       padding: 30px;
       margin: 0;
-      color: #333;
+      color: #0A1A5E;
     }
 
     .container {
       max-width: 850px;
       margin: auto;
-      background: #fff;
+      background: #ffffff;
       padding: 25px;
       border-radius: 12px;
       box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
@@ -25,7 +26,7 @@
     h2 {
       text-align: center;
       margin-bottom: 20px;
-      color: #1976d2;
+      color: #0057FF;
     }
 
     .search-bar {
@@ -38,27 +39,28 @@
       flex: 1;
       padding: 12px;
       font-size: 16px;
-      border: 1px solid #ccc;
+      border: 1px solid #2AD3B5;
       border-radius: 6px;
+      outline-color: #2AD3B5;
     }
 
     .search-bar button {
       padding: 12px 24px;
       font-size: 16px;
-      background-color: #1976d2;
-      color: white;
+      background: linear-gradient(90deg, #2AD3B5, #0057FF);
+      color: #fff;
       border: none;
       border-radius: 6px;
       cursor: pointer;
-      transition: background 0.2s ease;
+      transition: background 0.3s ease;
     }
 
     .search-bar button:hover {
-      background-color: #0f5cb3;
+      background: linear-gradient(90deg, #00b49c, #0044cc);
     }
 
     .search-bar button:disabled {
-      background-color: #ccc;
+      background: #ccc;
       cursor: not-allowed;
     }
 
@@ -73,10 +75,24 @@
     }
 
     #pagination {
-      display: none;
+      display: flex;
       justify-content: center;
       gap: 12px;
       margin-top: 16px;
+    }
+
+    #pagination button {
+      background-color: #0057FF;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 10px 20px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    #pagination button:hover {
+      background-color: #0044cc;
     }
 
     #videoList {
@@ -98,33 +114,79 @@
       transform: scale(1.03);
     }
 
-    #videoList p {
-      margin-top: 8px;
-      font-size: 14px;
-      color: #333;
+    /* Dark Theme Styles */
+    body.dark-theme {
+      background: #121212;
+      color: #e0e0e0;
     }
+
+    .container.dark-theme {
+      background: #1e1e1e;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    h2.dark-theme {
+      color: #4e91f7;
+    }
+
+    .search-bar input[type="text"].dark-theme {
+      border: 1px solid #4e91f7;
+      background: #2a2a2a;
+      color: #fff;
+    }
+
+    .search-bar button.dark-theme {
+      background: linear-gradient(90deg, #4e91f7, #2a8be6);
+    }
+
+    .search-bar button.dark-theme:hover {
+      background: linear-gradient(90deg, #2a8be6, #4e91f7);
+    }
+
+    #videoList img.dark-theme {
+      box-shadow: 0 2px 10px rgba(255, 255, 255, 0.1);
+    }
+
+    /* Dark theme button style */
+    #themeToggle {
+      background-color: #2ad3b5;
+      color: #fff;
+      padding: 10px 15px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background 0.3s ease;
+    }
+
+    #themeToggle:hover {
+      background-color: #00b49c;
+    }
+
     @media screen and (max-width: 600px) {
+      .search-bar input[type="text"] {
+        padding: 10px;
+        font-size: 14px;
+      }
 
+      .search-bar button {
+        padding: 10px 20px;
+        font-size: 14px;
+      }
 
-  .search-bar input[type="text"] {
-    padding: 10px;
-    font-size: 14px;
-  }
+      #playerContainer iframe {
+        height: 200px;
+      }
 
-  .search-bar button {
-    padding: 10px 20px;
-    font-size: 14px;
-  }
-
-  
-}
-
+      #videoList {
+        grid-template-columns: 1fr;
+      }
+    }
   </style>
 </head>
 <body>
 
   <div class="container">
-    <h2>integração com YouTube</h2>
+    <h2>Integração com YouTube</h2>
 
     <div class="search-bar">
       <input type="text" id="searchInput" placeholder="Digite algo para pesquisar...">
@@ -137,6 +199,8 @@
         <button id="prevPage" onclick="changePage(-1)" disabled>&lt; Anterior</button>
         <button id="nextPage" onclick="changePage(1)">Próximo &gt;</button>
       </div>
+      <!-- Theme Toggle Button here -->
+      <button id="themeToggle" onclick="toggleTheme()">Mudar para Tema Escuro</button>
     </div>
 
     <div id="videoList"></div>
@@ -149,6 +213,28 @@
     let currentQuery = '';
     let hasSearched = false;
 
+    // Toggling between dark and light themes
+    function toggleTheme() {
+      const body = document.body;
+      const container = document.querySelector('.container');
+      const themeToggleButton = document.getElementById('themeToggle');
+      
+      body.classList.toggle('dark-theme');
+      container.classList.toggle('dark-theme');
+      document.querySelector('h2').classList.toggle('dark-theme');
+      document.querySelector('.search-bar input').classList.toggle('dark-theme');
+      document.querySelector('.search-bar button').classList.toggle('dark-theme');
+      document.querySelector('#pagination button').classList.toggle('dark-theme');
+      document.querySelector('#videoList').classList.toggle('dark-theme');
+      document.querySelectorAll('#videoList p').forEach(p => p.classList.toggle('dark-theme'));
+      
+      if (body.classList.contains('dark-theme')) {
+        themeToggleButton.textContent = 'Mudar para Tema Claro';
+      } else {
+        themeToggleButton.textContent = 'Mudar para Tema Escuro';
+      }
+    }
+
     async function fetchSuggestedVideos() {
       const query = 'como estudar melhor';
       currentQuery = query;
@@ -157,7 +243,7 @@
       const data = await response.json();
       currentItems = data.items;
       displayVideos(0);
-      document.getElementById('pagination').style.display = 'none';
+      document.getElementById('pagination').style.display = 'flex';  // Exibir sempre a navegação
     }
 
     async function searchVideos() {
@@ -171,14 +257,14 @@
       const data = await response.json();
       currentItems = data.items;
       displayVideos(0);
-      document.getElementById('pagination').style.display = 'flex';
+      document.getElementById('pagination').style.display = 'flex';  // Exibir sempre a navegação
     }
 
     function displayVideos(pageIndex) {
       const start = pageIndex * 4;
       const videos = currentItems.slice(start, start + 4);
       const videoList = document.getElementById('videoList');
-      videoList.innerHTML = '';
+      videoList.innerHTML = '';  // Limpar lista de vídeos existente
 
       videos.forEach(item => {
         const videoId = item.id.videoId;
@@ -211,6 +297,5 @@
 
     fetchSuggestedVideos();
   </script>
-
 </body>
 </html>
